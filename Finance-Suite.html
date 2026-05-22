@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Global Finance Suite</title>
+    <style>
+        :root {
+            --primary: #0f172a;
+            --accent: #2563eb;
+            --accent-hover: #1d4ed8;
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+        }
+
+        /* Universal Box Sizing prevents zoom overflow */
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 0;
+            color: var(--text-main);
+            overflow-x: hidden; /* Prevents side-scrolling on massive zooms */
+        }
+
+        /* Top Navigation */
+        header {
+            background-color: var(--primary);
+            color: white;
+            padding: 1rem 5%;
+            display: flex;
+            flex-wrap: wrap; /* Allows stacking if zoomed in heavy */
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .logo-area h1 {
+            margin: 0;
+            font-size: clamp(1.2rem, 4vw, 1.5rem); /* Fluid typography */
+            cursor: pointer;
+        }
+
+        .global-settings {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .global-settings select {
+            padding: 0.5rem;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: white;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        /* Main Container */
+        .container {
+            width: 95%;
+            max-width: 1200px;
+            margin: 2rem auto;
+        }
+
+        /* Dashboard View */
+        .dashboard {
+            display: grid;
+            /* Card grid adapts to zoom levels perfectly */
+            grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+            gap: 1.5rem;
+        }
+
+        .module-card {
+            background: var(--card-bg);
+            padding: 2rem;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .module-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+            border-color: var(--accent);
+        }
+
+        .module-card h2 {
+            margin-top: 0;
+            color: var(--accent);
+            font-size: 1.25rem;
+        }
+
+        .module-card p {
+            color: var(--text-muted);
+            margin-bottom: 1.5rem;
+            font-size: 0.95rem;
+            flex-grow: 1;
+        }
+
+        .btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: background 0.2s;
+        }
+
+        .btn:hover { background: var(--accent-hover); }
+        .btn-secondary {
+            background: #e2e8f0;
+            color: var(--text-main);
+            margin-bottom: 1.5rem;
+            width: auto;
+            display: inline-block;
+        }
+        .btn-secondary:hover { background: #cbd5e1; }
+
+        /* Module Views */
+        .module-view {
+            display: none;
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: max(1.5rem, 3vw); /* Adapts padding based on screen size */
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        }
+
+        /* Fluid layout instead of strict media queries */
+        .calc-layout {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 2rem;
+            margin-top: 1.5rem;
+        }
+
+        /* 300px base width, but will grow to fill space or shrink if needed */
+        .inputs, .outputs { 
+            flex: 1 1 300px; 
+            min-width: 0; 
+        }
+
+        .outputs {
+            background: #f1f5f9;
+            padding: 1.5rem;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .form-group { margin-bottom: 1.25rem; }
+        
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        input[type="number"], select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 1rem;
+        }
+
+        .result-row {
+            display: flex;
+            flex-wrap: wrap; /* Allows text to wrap safely if zoomed heavily */
+            justify-content: space-between;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .result-row:last-child { border-bottom: none; }
+        
+        .result-row.total {
+            margin-top: 0.5rem;
+        }
+
+        .result-row.total span:last-child {
+            font-size: clamp(1.2rem, 3vw, 1.75rem); /* Text scales safely with zoom */
+            font-weight: 700;
+            color: var(--accent);
+            word-break: break-word; /* Prevents long numbers from breaking layout */
+        }
+
+        /* Inline Currency Converter */
+        .converter-widget {
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+            border-top: 2px dashed #cbd5e1;
+        }
+
+        .converter-widget h4 { margin: 0 0 1rem 0; color: var(--text-muted); }
+        
+        .converter-flex {
+            display: flex;
+            flex-wrap: wrap; /* Safe wrapping for converters */
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .converter-flex select { 
+            flex: 1 1 120px; 
+        }
+        
+        .converted-val {
+            flex: 1 1 150px;
+            font-size: clamp(1.1rem, 2.5vw, 1.25rem);
+            font-weight: 700;
+            text-align: right;
+            color: #059669;
+            word-break: break-word;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo-area" onclick="showDashboard()">
+            <h1>🏦 Global Finance Suite</h1>
+        </div>
+        <div class="global-settings">
+            <span style="font-size: 0.9rem;">Global Currency:</span>
+            <select id="global-currency" onchange="updateGlobalCurrency()">
+                <option value="USD">USD ($)</option>
+                <option value="INR">INR (₹)</option>
+                <option value="GBP">GBP (£)</option>
+                <option value="EUR">EUR (€)</option>
+                <option value="JPY">JPY (¥)</option>
+            </select>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- DASHBOARD -->
+        <div id="dashboard" class="dashboard">
+            <div class="module-card" onclick="openModule('interest')">
+                <h2>Interest Calculator</h2>
+                <p>Calculate Simple and Compound returns on your lump-sum investments.</p>
+                <button class="btn">Open Tool</button>
+            </div>
+            <div class="module-card" onclick="openModule('emi')">
+                <h2>EMI / Loan Calculator</h2>
+                <p>Figure out your monthly payments for mortgages, cars, or personal loans.</p>
+                <button class="btn">Open Tool</button>
+            </div>
+            <div class="module-card" onclick="openModule('sip')">
+                <h2>SIP / Recurring Invest</h2>
+                <p>Calculate future wealth based on regular, systematic monthly contributions.</p>
+                <button class="btn">Open Tool</button>
+            </div>
+            <div class="module-card" onclick="openModule('budget')">
+                <h2>50/30/20 Budgeter</h2>
+                <p>Instantly split your after-tax income into Needs, Wants, and Savings.</p>
+                <button class="btn">Open Tool</button>
+            </div>
+            <div class="module-card" onclick="openModule('cagr')">
+                <h2>CAGR Calculator</h2>
+                <p>Calculate the exact annualized growth rate of any investment over time.</p>
+                <button class="btn">Open Tool</button>
+            </div>
+        </div>
+
+        <!-- MODULE: INTEREST -->
+        <div id="module-interest" class="module-view">
+            <button class="btn btn-secondary" onclick="showDashboard()">← Back to Dashboard</button>
+            <h2>Interest Calculator</h2>
+            <div class="calc-layout">
+                <div class="inputs">
+                    <div class="form-group">
+                        <label>Type of Interest</label>
+                        <select id="int-type">
+                            <option value="simple">Simple Interest</option>
+                            <option value="compound">Compound Interest</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Principal Amount (<span class="cur-sym">$</span>)</label>
+                        <input type="number" id="int-principal" value="10000">
+                    </div>
+                    <div class="form-group">
+                        <label>Annual Interest Rate (%)</label>
+                        <input type="number" id="int-rate" value="7">
+                    </div>
+                    <div class="form-group">
+                        <label>Time Period (Years)</label>
+                        <input type="number" id="int-years" value="5">
+                    </div>
+                    <button class="btn" onclick="calcInterest()">Calculate Returns</button>
+                </div>
+                <div class="outputs">
+                    <div class="result-row">
+                        <span>Invested Amount</span>
+                        <span id="int-res-principal">$0.00</span>
+                    </div>
+                    <div class="result-row">
+                        <span>Interest Earned</span>
+                        <span id="int-res-earned">$0.00</span>
+                    </div>
+                    <div class="result-row total">
+                        <span>Total Value</span>
+                        <span id="int-res-total">$0.00</span>
+                    </div>
+                    
+                    <div class="converter-widget" id="int-converter" style="display:none;">
+                        <h4>Convert Total Value to:</h4>
+                        <div class="converter-flex">
+                            <select id="int-target-cur" onchange="convertLocal('int')">
+                                <option value="USD">USD</option>
+                                <option value="INR">INR</option>
+                                <option value="GBP">GBP</option>
+                                <option value="EUR">EUR</option>
+                                <option value="JPY">JPY</option>
+                            </select>
+                            <div class="converted-val" id="int-converted-output">-</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODULE: EMI LOAN -->
+        <div id="module-emi" class="module-view">
+            <button class="btn btn-secondary" onclick="showDashboard()">← Back to Dashboard</button>
+            <h2>EMI / Loan Calculator</h2>
+            <div class="calc-layout">
+                <div class="inputs">
+                    <div class="form-group">
+                        <label>Total Loan Amount (<span class="cur-sym">$</span>)</label>
+                        <input type="number" id="emi-principal" value="50000">
+                    </div>
+                    <div class="form-group">
+                        <label>Annual Interest Rate (%)</label>
+                        <input type="number" id="emi-rate" value="8.5">
+                    </div>
+                    <div class="form-group">
+                        <label>Loan Tenure (Years)</label>
+                        <input type="number" id="emi-years" value="5">
+                    </div>
+                    <button class="btn" onclick="calcEMI()">Calculate EMI</button>
+                </div>
+                <div class="outputs">
+                    <div class="result-row">
+                        <span>Principal Amount</span>
+                        <span id="emi-res-principal">$0.00</span>
+                    </div>
+                    <div class="result-row">
+                        <span>Total Interest Payable</span>
+                        <span id="emi-res-interest">$0.00</span>
+                    </div>
+                    <div class="result-row total">
+                        <span>Monthly EMI</span>
+                        <span id="emi-res-total">$0.00</span>
+                    </div>
+                    
+                    <div class="converter-widget" id="emi-converter" style="display:none;">
+                        <h4>Convert Monthly EMI to:</h4>
+                        <div class="converter-flex">
+                            <select id="emi-target-cur" onchange="convertLocal('emi')">
+                                <option value="USD">USD</option>
+                                <option value="INR">INR</option>
+                                <option value="GBP">GBP</option>
+                                <option value="EUR">EUR</option>
+                                <option value="JPY">JPY</option>
+                            </select>
+                            <div class="converted-val" id="emi-converted-output">-</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODULE: SIP / RECURRING -->
+        <div id="module-sip" class="module-view">
+            <button class="btn btn-secondary" onclick="showDashboard()">← Back to Dashboard</button>
+            <h2>SIP / Recurring Investment</h2>
+            <div class="calc-layout">
+                <div class="inputs">
+                    <div class="form-group">
+                        <label>Monthly Investment (<span class="cur-sym">$</span>)</label>
+                        <input type="number" id="sip-monthly" value="500">
+                    </div>
+                    <div class="form-group">
+                        <label>Expected Return Rate (% p.a.)</label>
+                        <input type="number" id="sip-rate" value="12">
+                    </div>
+                    <div class="form-group">
+                        <label>Time Period (Years)</label>
+                        <input type="number" id="sip-years" value="10">
+                    </div>
+                    <button class="btn" onclick="calcSIP()">Calculate SIP Returns</button>
+                </div>
+                <div class="outputs">
+                    <div class="result-row">
+                        <span>Total Invested</span>
+                        <span id="sip-res-invested">$0.00</span>
+                    </div>
+                    <div class="result-row">
+                        <span>Est. Returns Earned</span>
+                        <span id="sip-res-earned">$0.00</span>
+                    </div>
+                    <div class="result-row total">
+                        <span>Total Wealth</span>
+                        <span id="sip-res-total">$0.00</span>
+                    </div>
+                    
+                    <div class="converter-widget" id="sip-converter" style="display:none;">
+                        <h4>Convert Total Wealth to:</h4>
+                        <div class="converter-flex">
+                            <select id="sip-target-cur" onchange="convertLocal('sip')">
+                                <option value="USD">USD</option>
+                                <option value="INR">INR</option>
+                                <option value="GBP">GBP</option>
+                                <option value="EUR">EUR</option>
+                                <option value="JPY">JPY</option>
+                            </select>
+                            <div class="converted-val" id="sip-converted-output">-</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODULE: BUDGET -->
+        <div id="module-budget" class="module-view">
+            <button class="btn btn-secondary" onclick="showDashboard()">← Back to Dashboard</button>
+            <h2>50/30/20 Budget Generator</h2>
+            <div class="calc-layout">
+                <div class="inputs">
+                    <div class="form-group">
+                        <label>Monthly Take-Home Pay (<span class="cur-sym">$</span>)</label>
+                        <input type="number" id="budget-income" value="4000">
+                    </div>
+                    <button class="btn" onclick="calcBudget()">Generate Budget</button>
+                </div>
+                <div class="outputs">
+                    <div class="result-row">
+                        <span>Needs (50%)<br><small style="color:#64748b">Rent, groceries, utilities</small></span>
+                        <span id="budget-needs">$0.00</span>
+                    </div>
+                    <div class="result-row">
+                        <span>Wants (30%)<br><small style="color:#64748b">Dining out, hobbies, travel</small></span>
+                        <span id="budget-wants">$0.00</span>
+                    </div>
+                    <div class="result-row total">
+                        <span>Savings / Debt (20%)<br><small style="color:#64748b">Investments, extra payments</small></span>
+                        <span id="budget-savings">$0.00</span>
+                    </div>
+                    
+                    <div class="converter-widget" id="budget-converter" style="display:none;">
+                        <h4>Convert 20% Savings Goal to:</h4>
+                        <div class="converter-flex">
+                            <select id="budget-target-cur" onchange="convertLocal('budget')">
+                                <option value="USD">USD</option>
+                                <option value="INR">INR</option>
+                                <option value="GBP">GBP</option>
+                                <option value="EUR">EUR</option>
+                                <option value="JPY">JPY</option>
+                            </select>
+                            <div class="converted-val" id="budget-converted-output">-</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODULE: CAGR -->
+        <div id="module-cagr" class="module-view">
+            <button class="btn btn-secondary" onclick="showDashboard()">← Back to Dashboard</button>
+            <h2>CAGR Calculator</h2>
+            <div class="calc-layout">
+                <div class="inputs">
+                    <div class="form-group">
+                        <label>Initial Investment (<span class="cur-sym">$</span>)</label>
+                        <input type="number" id="cagr-initial" value="10000">
+                    </div>
+                    <div class="form-group">
+                        <label>Final Value (<span class="cur-sym">$</span>)</label>
+                        <input type="number" id="cagr-final" value="25000">
+                    </div>
+                    <div class="form-group">
+                        <label>Time Period (Years)</label>
+                        <input type="number" id="cagr-years" value="5">
+                    </div>
+                    <button class="btn" onclick="calcCAGR()">Calculate CAGR</button>
+                </div>
+                <div class="outputs">
+                    <div class="result-row">
+                        <span>Absolute Growth</span>
+                        <span id="cagr-res-growth">$0.00</span>
+                    </div>
+                    <div class="result-row total">
+                        <span>Annualized Return (CAGR)</span>
+                        <span id="cagr-res-percent" style="color: #2563eb;">0.00%</span>
+                    </div>
+                    
+                    <div class="converter-widget" id="cagr-converter" style="display:none;">
+                        <h4>Convert Final Value to:</h4>
+                        <div class="converter-flex">
+                            <select id="cagr-target-cur" onchange="convertLocal('cagr')">
+                                <option value="USD">USD</option>
+                                <option value="INR">INR</option>
+                                <option value="GBP">GBP</option>
+                                <option value="EUR">EUR</option>
+                                <option value="JPY">JPY</option>
+                            </select>
+                            <div class="converted-val" id="cagr-converted-output">-</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // --- 1. GLOBAL CURRENCY & EXCHANGE RATES ---
+        const exchangeRates = {
+            USD: 1,
+            INR: 83.50,
+            EUR: 0.92,
+            GBP: 0.79,
+            JPY: 155.00
+        };
+
+        const locales = {
+            USD: 'en-US',
+            INR: 'en-IN',
+            EUR: 'de-DE',
+            GBP: 'en-GB',
+            JPY: 'ja-JP'
+        };
+
+        let currentCurrency = 'USD';
+        
+        const lastCalculations = {
+            int: 0,
+            emi: 0,
+            sip: 0,
+            budget: 0,
+            cagr: 0
+        };
+
+        function updateGlobalCurrency() {
+            currentCurrency = document.getElementById('global-currency').value;
+            
+            const formatter = new Intl.NumberFormat(locales[currentCurrency], { style: 'currency', currency: currentCurrency });
+            const symbol = formatter.formatToParts(0).find(x => x.type === 'currency').value;
+            
+            document.querySelectorAll('.cur-sym').forEach(el => {
+                el.innerText = symbol;
+            });
+
+            calcInterest();
+            calcEMI();
+            calcSIP();
+            calcBudget();
+            calcCAGR();
+        }
+
+        function formatMoney(amount, currencyCode = currentCurrency) {
+            return new Intl.NumberFormat(locales[currencyCode], {
+                style: 'currency',
+                currency: currencyCode,
+                maximumFractionDigits: 2
+            }).format(amount);
+        }
+
+        // --- 2. NAVIGATION LOGIC ---
+        function showDashboard() {
+            document.getElementById('dashboard').style.display = 'grid';
+            document.querySelectorAll('.module-view').forEach(el => el.style.display = 'none');
+        }
+
+        function openModule(moduleId) {
+            document.getElementById('dashboard').style.display = 'none';
+            document.querySelectorAll('.module-view').forEach(el => el.style.display = 'none');
+            document.getElementById('module-' + moduleId).style.display = 'block';
+        }
+
+        // --- 3. MODULE CALCULATORS ---
+
+        function calcInterest() {
+            const type = document.getElementById('int-type').value;
+            const p = parseFloat(document.getElementById('int-principal').value) || 0;
+            const r = parseFloat(document.getElementById('int-rate').value) / 100 || 0;
+            const t = parseFloat(document.getElementById('int-years').value) || 0;
+
+            let total = 0;
+            if (type === 'simple') {
+                total = p + (p * r * t);
+            } else {
+                total = p * Math.pow((1 + r), t);
+            }
+            const earned = total - p;
+
+            document.getElementById('int-res-principal').innerText = formatMoney(p);
+            document.getElementById('int-res-earned').innerText = formatMoney(earned);
+            document.getElementById('int-res-total').innerText = formatMoney(total);
+
+            lastCalculations.int = total;
+            document.getElementById('int-converter').style.display = 'block';
+            convertLocal('int');
+        }
+
+        function calcEMI() {
+            const p = parseFloat(document.getElementById('emi-principal').value) || 0;
+            const rAnnual = parseFloat(document.getElementById('emi-rate').value) || 0;
+            const years = parseFloat(document.getElementById('emi-years').value) || 0;
+
+            const rMonthly = rAnnual / 12 / 100;
+            const n = years * 12;
+
+            let emi = 0;
+            let totalPayable = 0;
+
+            if (rMonthly === 0) {
+                emi = p / n;
+                totalPayable = p;
+            } else {
+                emi = p * rMonthly * (Math.pow(1 + rMonthly, n)) / (Math.pow(1 + rMonthly, n) - 1);
+                totalPayable = emi * n;
+            }
+
+            const totalInterest = totalPayable - p;
+
+            document.getElementById('emi-res-principal').innerText = formatMoney(p);
+            document.getElementById('emi-res-interest').innerText = formatMoney(totalInterest);
+            document.getElementById('emi-res-total').innerText = formatMoney(emi);
+
+            lastCalculations.emi = emi;
+            document.getElementById('emi-converter').style.display = 'block';
+            convertLocal('emi');
+        }
+
+        function calcSIP() {
+            const p = parseFloat(document.getElementById('sip-monthly').value) || 0;
+            const rAnnual = parseFloat(document.getElementById('sip-rate').value) || 0;
+            const years = parseFloat(document.getElementById('sip-years').value) || 0;
+
+            const rMonthly = rAnnual / 12 / 100;
+            const n = years * 12;
+
+            const totalInvested = p * n;
+            const futureValue = p * ((Math.pow(1 + rMonthly, n) - 1) / rMonthly) * (1 + rMonthly);
+            const estReturns = futureValue - totalInvested;
+
+            document.getElementById('sip-res-invested').innerText = formatMoney(totalInvested);
+            document.getElementById('sip-res-earned').innerText = formatMoney(estReturns);
+            document.getElementById('sip-res-total').innerText = formatMoney(futureValue);
+
+            lastCalculations.sip = futureValue;
+            document.getElementById('sip-converter').style.display = 'block';
+            convertLocal('sip');
+        }
+
+        function calcBudget() {
+            const income = parseFloat(document.getElementById('budget-income').value) || 0;
+            
+            const needs = income * 0.50;
+            const wants = income * 0.30;
+            const savings = income * 0.20;
+
+            document.getElementById('budget-needs').innerText = formatMoney(needs);
+            document.getElementById('budget-wants').innerText = formatMoney(wants);
+            document.getElementById('budget-savings').innerText = formatMoney(savings);
+
+            lastCalculations.budget = savings;
+            document.getElementById('budget-converter').style.display = 'block';
+            convertLocal('budget');
+        }
+
+        function calcCAGR() {
+            const initial = parseFloat(document.getElementById('cagr-initial').value) || 0;
+            const finalVal = parseFloat(document.getElementById('cagr-final').value) || 0;
+            const years = parseFloat(document.getElementById('cagr-years').value) || 0;
+
+            if (initial === 0 || years === 0) return;
+
+            const absoluteGrowth = finalVal - initial;
+            const cagrDecimal = Math.pow((finalVal / initial), (1 / years)) - 1;
+            const cagrPercent = (cagrDecimal * 100).toFixed(2);
+
+            document.getElementById('cagr-res-growth').innerText = formatMoney(absoluteGrowth);
+            document.getElementById('cagr-res-percent').innerText = cagrPercent + "%";
+
+            lastCalculations.cagr = finalVal;
+            document.getElementById('cagr-converter').style.display = 'block';
+            convertLocal('cagr');
+        }
+
+        // --- 4. QUICK CURRENCY CONVERTER WITHIN MODULES ---
+        function convertLocal(moduleName) {
+            const baseAmount = lastCalculations[moduleName];
+            if (!baseAmount) return;
+            
+            const targetCurrency = document.getElementById(moduleName + '-target-cur').value;
+            
+            const amountInUSD = baseAmount / exchangeRates[currentCurrency];
+            const convertedAmount = amountInUSD * exchangeRates[targetCurrency];
+
+            document.getElementById(moduleName + '-converted-output').innerText = formatMoney(convertedAmount, targetCurrency);
+        }
+
+        // Initialize display
+        updateGlobalCurrency();
+    </script>
+</body>
+</html>
